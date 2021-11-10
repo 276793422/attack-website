@@ -9,8 +9,8 @@ from modules import site_config
 from modules import util
 
 # argument defaults and options for the CLI
-module_choices = ['clean', 'stix_data', 'groups', 'search', 'matrices', 'mitigations', 'software', 'tactics', 'techniques', 'tour', 'website_build', 'random_page', 'subdirectory', 'tests']
-extras = ['resources', 'versions', 'contribute', 'blog', 'attack_redirections']
+module_choices = ['clean', 'datasources', 'groups', 'search', 'matrices', 'mitigations', 'software', 'tactics', 'techniques', 'tour', 'website_build', 'random_page', 'redirections', 'subdirectory', 'tests']
+extras = ['resources', 'versions', 'contribute', 'blog']
 test_choices = ['size', 'links', 'external_links', 'citations']
 
 def validate_subdirectory_string(subdirectory_str):
@@ -37,8 +37,6 @@ def get_parsed_args():
                                     "the modules that pertain to the ATT&CK dataset will be ran. "
                                     "If you would like to run extra modules, opt-in these modules with the"
                                     "--extras flag."))
-    parser.add_argument('--refresh', '-r', action='store_true',
-                        help='Pull down the current STIX data from the MITRE/CTI GitHub respository')
     parser.add_argument('--no-stix-link-replacement', action='store_true',
                         help="If this flag is absent, links to attack.mitre.org/[page] in the STIX data will be replaced with /[page]. Add this flag to preserve links to attack.mitre.org.")
     parser.add_argument('--modules', '-m', nargs='+',
@@ -108,7 +106,7 @@ def remove_from_build(arg_modules, arg_extras):
         copy_of_modules = []
 
         for module in modules.run_ptr:
-            if module["name"].lower() in arg_modules:
+            if module["module_name"].lower() in arg_modules:
                 copy_of_modules.append(module)
         
         modules.run_ptr = copy_of_modules
@@ -119,7 +117,7 @@ def remove_from_build(arg_modules, arg_extras):
         copy_of_menu = []
 
         for module in modules.menu_ptr:
-            if module["name"].lower() in arg_modules:
+            if module["module_name"].lower() in arg_modules:
                 copy_of_menu.append(module)
         
         modules.menu_ptr = copy_of_menu
@@ -151,11 +149,11 @@ if __name__ == "__main__":
 
     # Get running modules and priorities
     for ptr in modules.run_ptr:
-        util.buildhelpers.print_start(ptr['name'])
+        util.buildhelpers.print_start(ptr['module_name'])
         start_time = time.time()
         ptr['run_module']()
         end_time = time.time()
-        util.buildhelpers.print_end(ptr['name'], start_time, end_time)
+        util.buildhelpers.print_end(ptr['module_name'], start_time, end_time)
 
     # Print end of module
     update_end = time.time()

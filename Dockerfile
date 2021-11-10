@@ -1,4 +1,4 @@
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 COPY . /home/attackuser/attack-website
 # label metadata
 LABEL name="attack-website"
@@ -27,7 +27,7 @@ RUN apt-get update --fix-missing \
 
   WORKDIR /home/attackuser/attack-website
 
-  RUN python3 update-attack.py -c -b
+  RUN python3 update-attack.py --no-test-exitstatus
 
   WORKDIR /home/attackuser/attack-website/output
 

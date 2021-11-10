@@ -44,21 +44,25 @@ def generate_markdown_files():
     # Amount of characters per category
     group_by = 2
 
-    software_list = util.relationshipgetters.get_software_list()        
+    software_list = util.relationshipgetters.get_software_list()
 
-    if software_list:
+    software_list_no_deprecated_revoked = util.buildhelpers.filter_deprecated_revoked(software_list)
+
+    if software_list_no_deprecated_revoked:
         has_software = True
     
     if has_software:
-        data['software_list_len'] = str(len(software_list))
+        data['software_list_len'] = str(len(software_list_no_deprecated_revoked))
 
-        side_menu_data = util.buildhelpers.get_side_menu_data("software", "/software/", software_list)
+        notes = util.relationshipgetters.get_objects_using_notes()
+
+        side_menu_data = util.buildhelpers.get_side_menu_data("software", "/software/", software_list_no_deprecated_revoked)
         data['side_menu_data'] = side_menu_data
 
-        side_menu_mobile_view_data = util.buildhelpers.get_side_menu_mobile_view_data("software", "/software/", software_list, group_by)
+        side_menu_mobile_view_data = util.buildhelpers.get_side_menu_mobile_view_data("software", "/software/", software_list_no_deprecated_revoked, group_by)
         data['side_menu_mobile_view_data'] = side_menu_mobile_view_data
 
-        data['software_table'] = get_software_table_data(software_list)
+        data['software_table'] = get_software_table_data(software_list_no_deprecated_revoked)
         
         subs = software_config.software_index_md + json.dumps(data)
 
@@ -67,11 +71,11 @@ def generate_markdown_files():
 
         # Create the markdown for the enterprise groups in the stix
         for software in software_list:
-            generate_software_md(software, side_menu_data, side_menu_mobile_view_data)
+            generate_software_md(software, side_menu_data, side_menu_mobile_view_data, notes)
     
     return has_software
     
-def generate_software_md(software,side_menu_data,side_menu_mobile_view_data):
+def generate_software_md(software,side_menu_data,side_menu_mobile_view_data, notes):
     """Responsible for generating given software markdown"""
 
     attack_id = util.buildhelpers.get_attack_id(software)
@@ -85,6 +89,7 @@ def generate_software_md(software,side_menu_data,side_menu_mobile_view_data):
 
         data['side_menu_data'] = side_menu_data
         data['side_menu_mobile_view_data'] = side_menu_mobile_view_data
+        data['notes'] = notes.get(software['id'])
 
         dates = util.buildhelpers.get_created_and_modified_dates(software)
         
@@ -150,7 +155,8 @@ def generate_software_md(software,side_menu_data,side_menu_mobile_view_data):
             })
         
         # Get aliases descriptions
-        data['alias_descriptions'] = util.buildhelpers.get_alias_data(software.get("x_mitre_aliases")[1:], ext_ref)
+        if software.get("x_mitre_aliases"):
+            data['alias_descriptions'] = util.buildhelpers.get_alias_data(software['x_mitre_aliases'][1:], ext_ref)
 
         # Get group data of groups that use software
         data['groups'] = get_groups_using_software(software, reference_list)

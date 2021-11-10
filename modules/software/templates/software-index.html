@@ -7,10 +7,10 @@
 
 {% block innerleft %}
 <!--stop-indexing-for-search-->
-    <div class="group-nav-desktop-view">
+    <div class="side-nav-desktop-view h-100">
         {{ navigation.sidenav(parsed.side_menu_data, output_file) }}
     </div>
-    <div class="group-nav-mobile-view">
+    <div class="side-nav-mobile-view">
         {{ navigation.sidenav(parsed.side_menu_mobile_view_data, output_file) }} 
     </div>
 <!--start-indexing-for-search-->
@@ -42,6 +42,7 @@
                         <table class="table table-bordered table-alternate mt-2">
                             <thead>
                                 <tr>
+                                    <th scope="col">ID</th>
                                     <th scope="col">Name</th>
                                     <th scope="col">Associated Software</th>
                                     <th scope="col">Description</th>
@@ -50,6 +51,9 @@
                             <tbody>
                                 {% for row in parsed.software_table %}
                                     <tr>
+                                        <td>
+                                            <a href="/software/{{row.id|upper}}"> {{row.id|upper}} </a>
+                                        </td>
                                         <td>
                                             <a href="/software/{{row.id|upper}}"> {{row.name}} </a>
                                         </td>

@@ -172,11 +172,12 @@ def get_technique_table_data(tactic, techniques_list):
                     sub_data = {}
                     sub_data['name'] = subtechnique['object']['name']
                     sub_attack_id = get_attack_id(subtechnique['object'])
-                    if not "." in sub_attack_id:
-                        raise Exception(f"{attack_id} subtechnique's attackID '{sub_attack_id}' is malformed")
-                    sub_data['id'] = sub_attack_id.split(".")[1]
-                    sub_data['descr'] = subtechnique['object']['description']
-                    row['subtechniques'].append(sub_data)
+                    if sub_attack_id:
+                        if not "." in sub_attack_id:
+                            raise Exception(f"{attack_id} subtechnique's attackID '{sub_attack_id}' is malformed")
+                        sub_data['id'] = sub_attack_id.split(".")[1]
+                        sub_data['descr'] = subtechnique['object']['description']
+                        row['subtechniques'].append(sub_data)
 
             technique_table.append(row)
     
@@ -207,18 +208,17 @@ def get_side_nav_domains_data(side_nav_title, elements_list):
     elements_data = []
 
     for domain in site_config.domains:
-        if elements_list[domain]:
-            # Get alias for domain
-            domain_alias = get_domain_alias(domain.split("-")[0])
+        if domain['deprecated']: continue
+        if elements_list[domain['name']]:
 
             domain_data = {
-                "name": domain_alias,
-                "id": domain.split("-")[0],
-                "path": "/{}/{}/".format(side_nav_title, domain.split("-")[0]),
+                "name": domain['alias'],
+                "id": domain['name'].split("-")[0],
+                "path": "/{}/{}/".format(side_nav_title, domain['name'].split("-")[0]),
                 "children": []
             }
 
-            for element in elements_list[domain]:
+            for element in elements_list[domain['name']]:
                 attack_id = get_attack_id(element)
                 if attack_id:
                     domain_data['children'].append(get_element_data(element))
@@ -297,22 +297,19 @@ def get_side_nav_domains_mobile_view_data(side_nav_title, elements_list, amount_
     elements_data = []
 
     for domain in site_config.domains:
-
-        if elements_list[domain]:
+        if domain['deprecated']: continue
+        if elements_list[domain['name']]:
 
             caterogy_list = get_category_list()
 
-            # Get alias for domain
-            domain_alias = get_domain_alias(domain.split("-")[0])
-
             domain_data = {
-                "name": domain_alias,
-                "id": domain_alias,
-                "path": "/{}/{}/".format(side_nav_title, domain.split("-")[0]),
+                "name": domain['alias'],
+                "id": domain['alias'],
+                "path": "/{}/{}/".format(side_nav_title, domain['name'].split("-")[0]),
                 "children": []
             }
 
-            for element in elements_list[domain]:
+            for element in elements_list[domain['name']]:
                 attack_id = get_attack_id(element)
                 if attack_id:
                         
@@ -507,11 +504,14 @@ def technique_used_helper(technique_list, technique, reference_list):
                 parent_id = get_parent_technique_id(attack_id)
 
                 # If parent technique not already in list, add to list and add current sub-technique
+                # Parent technique will be marked as not used until it is seen
                 if parent_id not in technique_list:
                     technique_list[parent_id] = {}
                     technique_list[parent_id] = parent_technique_used_helper(parent_id)
 
                 technique_list[parent_id]['subtechniques'].append(get_technique_data_helper(attack_id, technique, reference_list))
+                # Sort subtechniques by name
+                technique_list[parent_id]['subtechniques'] = sorted(technique_list[parent_id]['subtechniques'], key=lambda k: k['id'])
             
             # Attack id is regular technique
             else:
@@ -520,9 +520,12 @@ def technique_used_helper(technique_list, technique, reference_list):
                 technique_list[attack_id] = get_technique_data_helper(attack_id, technique, reference_list)
 
         # Check if parent ID was added by sub-technique
-        # parent ID will not have description
-        elif 'descr' not in technique_list[attack_id]:
-            # Check if it has external references
+        # parent technique will be marked as not used
+        elif technique_list[attack_id]['technique_used'] == False:
+            # Include as a technique used
+            technique_list[attack_id]['technique_used'] = True
+
+            # Check if it has a description and add references
             if technique['relationship'].get('description'):
                 # Get filtered description
                 technique_list[attack_id]['descr'] = technique['relationship']['description']
@@ -532,12 +535,14 @@ def technique_used_helper(technique_list, technique, reference_list):
 
 def get_technique_data_helper(attack_id, technique, reference_list):
     """ Given an attack id, technique object and reference information, 
-        return dictionary with technique data
+        return dictionary with technique data, include as part of technique used
     """
 
     technique_data = {}
 
     technique_to_domain = relationshipgetters.get_technique_to_domain()
+
+    technique_data['technique_used'] = True
 
     technique_data['domain'] = technique_to_domain[attack_id].split('-')[0]
 
@@ -570,6 +575,7 @@ def parent_technique_used_helper(parent_id):
     parent_data['domain'] = technique_to_domain[parent_id].split('-')[0]
     parent_data['id'] = parent_id
     parent_data['name'] = get_technique_name(parent_id)
+    parent_data['technique_used'] = False
     parent_data['subtechniques'] = []
 
     return parent_data
@@ -581,17 +587,6 @@ def find_in_reference_list(reference_list, source_name):
         return True
 
     return False
-
-def get_domain_alias(domain):
-    """ Given a domain name, return its alias.
-        If not found return the same domain
-    """
-
-    for domain_pair in site_config.domain_aliases:
-        if domain_pair[1] == domain:
-            return domain_pair[0]
-    
-    return domain
 
 def replace_html_chars(to_be_replaced):
     return to_be_replaced.replace("\n", "")\
@@ -622,9 +617,9 @@ def get_navigator_layers(name, attack_id, obj_type, version, techniques_used):
     enterprise_layer['name'] = layer_name
     enterprise_layer['domain'] = "enterprise-attack"
     enterprise_layer['versions'] = {
-        "layer": "4.0",
+        "layer": "4.2",
         "attack": major_attack_version,
-        "navigator": "4.0"
+        "navigator": "4.3"
     }
     enterprise_layer['techniques'] = []
     enterprise_layer["gradient"] = { # white for nonused, blue for used
@@ -646,9 +641,9 @@ def get_navigator_layers(name, attack_id, obj_type, version, techniques_used):
     mobile_layer['name'] = layer_name
     mobile_layer['domain'] = "mobile-attack"
     mobile_layer['versions'] = {
-        "layer": "4.0",
+        "layer": "4.2",
         "attack": major_attack_version,
-        "navigator": "4.0"
+        "navigator": "4.3"
     }
     mobile_layer['techniques'] = []
     mobile_layer["gradient"] = { # white for nonused, blue for used
@@ -672,9 +667,9 @@ def get_navigator_layers(name, attack_id, obj_type, version, techniques_used):
         if technique.get('descr'):
             score = 1
             if technique.get('subtechniques'):
-                navigator_technique = get_navigator_technique(technique['id'], technique["descr"], score, True)
+                navigator_technique = get_navigator_technique(technique['id'], technique["descr"] if "descr" in technique else "", score, True)
             else:
-                navigator_technique = get_navigator_technique(technique['id'], technique["descr"], score, False)
+                navigator_technique = get_navigator_technique(technique['id'], technique["descr"] if "descr" in technique else "", score, False)
         else:
             if technique.get('subtechniques'):
                 navigator_technique = get_navigator_technique(technique['id'], None, None, True)
@@ -689,7 +684,7 @@ def get_navigator_layers(name, attack_id, obj_type, version, techniques_used):
         if technique.get('subtechniques'):
             for subtechnique in technique['subtechniques']:
                 score = 1
-                navigator_technique = get_navigator_technique(technique['id']+"."+subtechnique['id'], subtechnique["descr"], score, True)
+                navigator_technique = get_navigator_technique(technique['id']+"."+subtechnique['id'], subtechnique["descr"] if "descr" in subtechnique else "", score, True)
 
                 if technique['domain'].startswith("enterprise"):
                     enterprise_layer['techniques'].append(navigator_technique)
@@ -795,10 +790,11 @@ def filter_techniques_by_platform(tech_list, platforms):
         # Do not try to find if it's already on the filtered list
         if not ids_for_duplicates.get(obj['id']):
             for platform in platforms:
-                if platform in obj["x_mitre_platforms"]:
-                    ids_for_duplicates[obj['id']] = True
-                    filtered_list.append(obj)
-                    break
+                if obj.get("x_mitre_platforms"):
+                    if platform in obj["x_mitre_platforms"]:
+                        ids_for_duplicates[obj['id']] = True
+                        filtered_list.append(obj)
+                        break
 
     return filtered_list
 
@@ -859,22 +855,21 @@ def remove_module_from_menu(module_to_be_removed):
     """ Given a list of results, remove elements from menu if their result was False """
 
     for module in modules.menu_ptr:
-        if module['name'] == module_to_be_removed:
+        if module['module_name'] == module_to_be_removed:
             modules.menu_ptr.remove(module)
             return
 
 def remove_element_from_sub_menu(selected_module, element):
     """ Given a sub menu item and a module, removes element from sub menu """
-
     def remove_from_sub_menu_list(module):
         if module.get('children'):
             for child in module['children']:
-                if child['name'] == element:
+                if child.get('display_name') == element:
                     module['children'].remove(child)
                     return
 
     for module in modules.menu_ptr:
-        if module['name'] == selected_module:
+        if module['module_name'] == selected_module:
             remove_from_sub_menu_list(module)
 
 def get_matrix_data(techniques):
@@ -941,9 +936,6 @@ def generate_redirections(redirections_filename):
             os.mkdir(site_config.redirects_markdown_path)
 
         for obj in redirects:
-
-            if not obj["from"].endswith("/index.html"):
-                obj["from"] += "/index.html"
 
             subs = site_config.redirect_md.substitute(obj)
 

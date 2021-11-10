@@ -2,11 +2,11 @@
 
 ## Building the site with custom content
 
-The MITRE ATT&CK Website® is designed support an evolving knowledge base. The content seen on the site is generated from data in STIX2.0 JSON format. The data used on the live site at [attack.mitre.org](https://attack.mitre.org) can be found on our [mitre/cti](https://github.com/mitre/cti) github repo. 
+The MITRE ATT&CK Website® is designed support an evolving knowledge base The content seen on the site is generated from data in STIX JSON format. Both STIX 2.0 and STIX 2.1 data is supported. The data used to generate the live site at [attack.mitre.org](https://attack.mitre.org) can be found on our [mitre/cti](https://github.com/mitre/cti) github repo. 
 
-You can generate the website using custom content by replacing the STIX bundles in `/data/stix/`:
-- `enterprise-attack.json` is the bundle for the enterprise domain.
-- `mobile-attack.json` is the bundle for the mobile domain.
+You can generate the website using custom content by replacing the STIX bundle locations in `modules/site_config.py`, `domains`. A domain location can be a URL (please include http:// or https://), or a local file on disk. 
+
+Matrices are defined in `modules/matrices/matrices_config.py`, you will need to update the structures declared in this file to modify the matrices.
 
 ## Configuration
 
@@ -16,7 +16,7 @@ Users wishing to make changes to the ATT&CK website visual theme should take a l
 
 ### Changing logos
 
-The logos used in the header, footer, and on the landing page of the website can be easily changed. Simply find their keys in the `settings_dict` of ``modules/website_build/website_build_config.py`, and update their values to point to the new images.
+The logos used in the header, footer, and on the landing page of the website can be easily changed. Simply find their keys in the `settings_dict` of `modules/website_build/website_build_config.py`, and update their values to point to the new images.
 
 ### Attaching a custom Navigator instance
 
@@ -50,20 +50,21 @@ def get_priority():
 
 def get_menu():
     return {
-        "name": "Your module's name", 
+        "display_name": "Name that will be displayed in the navigation menu"
+        "module_name": "Your module's name", 
         "url": "/your_module-s_name/", 
         "external_link": False,
         "priority": your_module-s_name_config.priority,
         "children": [
             {
-                "name": "Module sub-menu page",
+                "display_name": "Module sub-menu page",
                 "url": "/your_module-s_name/subpage",
                 "external_link": False,
                 "children": []
             },
             ...
             {
-                "name": "Module sub-menu external page",
+                "display_name": "Module sub-menu external page",
                 "url": "https://attack.mitre.org",
                 "external_link": True,
                 "children": []            
